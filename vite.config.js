@@ -7,4 +7,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3001,
   },
+  css: {
+    modules: {
+      localsConvention: 'camelCaseOnly',
+      generateScopedName: '[path]___[name]__[local]___[hash:base64:5]',
+    },
+  },
 });
