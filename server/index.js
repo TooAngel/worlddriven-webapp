@@ -1,5 +1,4 @@
 import express from 'express';
-import { createServer } from 'vite';
 import fs from 'fs';
 import proxy from './proxy.js';
 
@@ -12,6 +11,7 @@ async function startServer() {
   // Setup Vite middleware (development only)
   let vite;
   if (!isProduction) {
+    const { createServer } = await import('vite');
     vite = await createServer({
       server: { middlewareMode: true },
       appType: 'custom',
@@ -52,12 +52,12 @@ async function startServer() {
   // SPA routing - must be last!
   if (isProduction) {
     // Production: serve pre-built index.html
-    app.get('/*', (req, res) => {
+    app.get('/{*path}', (req, res) => {
       res.sendFile('index.html', { root: './dist' });
     });
   } else {
     // Development: use Vite to transform index.html
-    app.get('/*', async (req, res) => {
+    app.get('/{*path}', async (req, res) => {
       try {
         const template = await vite.transformIndexHtml(
           req.originalUrl,
