@@ -11,7 +11,7 @@ console.log(`Proxy API requests to: ${apiURL}`);
  * Proxy all API requests to the worlddriven/core backend
  * Converts sessionId cookie to Authorization header
  */
-router.all('*', async (req, res) => {
+router.all('/{*path}', async (req, res) => {
   try {
     // Extract sessionId from cookie and convert to Authorization header
     let authorization;
