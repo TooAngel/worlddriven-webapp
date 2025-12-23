@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { RepositoryPage } from './pages/RepositoryPage';
 import { PullRequestPage } from './pages/PullRequestPage';
 import { AdminPage } from './pages/AdminPage';
+import { AuthCallback } from './pages/AuthCallback';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
+          <Route path="auth/callback" element={<AuthCallback />} />
           <Route
             path="dashboard"
             element={

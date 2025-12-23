@@ -56,8 +56,8 @@ router.all('/{*path}', async (req, res) => {
       }
     });
 
-    // Handle login route - set httpOnly cookie
-    if (req.url === '/auth/login' && response.ok) {
+    // Handle auth callback - set httpOnly cookie
+    if (req.url === '/auth/callback' && response.ok) {
       const data = await response.json();
       if (data.sessionId) {
         res.cookie('sessionId', data.sessionId, {

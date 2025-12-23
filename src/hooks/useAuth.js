@@ -57,8 +57,21 @@ export function useAuth() {
     }
   }, []);
 
-  const login = useCallback(() => {
-    window.location.href = '/login';
+  const login = useCallback(async () => {
+    try {
+      const callbackUrl = `${window.location.origin}/auth/callback`;
+      const response = await fetch(
+        `/api/auth/url?redirect_uri=${encodeURIComponent(callbackUrl)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        window.location.href = data.url;
+      } else {
+        console.error('Failed to get OAuth URL:', response.status);
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
   }, []);
 
   return { user, authenticated, loading, login, logout, checkAuth };
