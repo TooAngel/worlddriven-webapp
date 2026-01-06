@@ -1,9 +1,9 @@
 import React from 'react';
-import { Repository } from '../Repository';
-import { RepositoryListItem } from '../RepositoryListItem';
-import { PullRequestView } from '../PullRequestView';
+import { Repository } from './repository.jsx'; // eslint-disable-line no-unused-vars
+import { RepositoryListItem } from './repositoryListItem.jsx'; // eslint-disable-line no-unused-vars
+import { PullRequestView } from './pullrequestView.jsx'; // eslint-disable-line no-unused-vars
 
-import styles from '../../styles/modules/dashboard.module.css';
+import styles from '../css/dashboard.module.css';
 
 /**
  * Dashboard class
@@ -176,7 +176,7 @@ export class Dashboard extends React.Component {
       <div className={styles.content}>
         <div className="top">
           <div className="login">
-            <a href="/api/user/logout">
+            <a href="/api/logout">
               <span className="logintitle">Logout</span>
               <img src="/images/GitHub-Mark-120px-plus.png" width="30" />
             </a>
