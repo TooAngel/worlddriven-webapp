@@ -11,7 +11,17 @@ console.log(`Proxy API requests to: ${apiURL}`);
  * Proxy all API requests to the worlddriven/core backend
  * Converts sessionId cookie to Authorization header
  */
+router.all('/', async (req, res) => {
+  // Handle root path
+  handleProxy(req, res);
+});
+
 router.all('/{*path}', async (req, res) => {
+  handleProxy(req, res);
+});
+
+async function handleProxy(req, res) {
+  console.log(`[Proxy] ${req.method} ${req.url} -> ${apiURL}${req.url}`);
   try {
     // Extract sessionId from cookie and convert to Authorization header
     let authorization;
@@ -46,18 +56,35 @@ router.all('/{*path}', async (req, res) => {
       options.body = req.body;
     }
 
-    // Forward request to backend
+    // Forward request to backend (don't follow redirects - pass them to browser)
+    options.redirect = 'manual';
     const response = await fetch(url, options);
 
+    // Handle redirects - pass them through to browser
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      console.log(`[Proxy] Redirect ${response.status} -> ${location}`);
+      if (location) {
+        res.redirect(response.status, location);
+        return;
+      }
+    }
+    console.log(`[Proxy] Response status: ${response.status}`);
+
     // Copy response headers (excluding set-cookie which we handle separately)
-    Object.entries(response.headers.raw()).forEach(([key, value]) => {
+    response.headers.forEach((value, key) => {
       if (key.toLowerCase() !== 'set-cookie') {
         res.setHeader(key, value);
       }
     });
 
     // Handle auth callback - set httpOnly cookie
-    if (req.url === '/auth/callback' && response.ok) {
+    // Supports both /auth/callback (API flow) and /github-callback (redirect flow)
+    if (
+      (req.url === '/auth/callback' ||
+        req.url.startsWith('/github-callback')) &&
+      response.ok
+    ) {
       const data = await response.json();
       if (data.sessionId) {
         res.cookie('sessionId', data.sessionId, {
@@ -67,6 +94,11 @@ router.all('/{*path}', async (req, res) => {
           maxAge: 60 * 60 * 24 * 30 * 1000, // 30 days in milliseconds
         });
         delete data.sessionId;
+      }
+      // For github-callback, redirect to the specified URL
+      if (req.url.startsWith('/github-callback') && data.redirect) {
+        res.redirect(data.redirect);
+        return;
       }
       res.status(response.status).json(data);
       return;
@@ -93,6 +125,6 @@ router.all('/{*path}', async (req, res) => {
     console.error('Error in proxy:', error);
     res.status(500).send('Internal Server Error');
   }
-});
+}
 
 export default router;

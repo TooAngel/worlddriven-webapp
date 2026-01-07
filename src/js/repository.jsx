@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import styles from '../../styles/modules/repository.module.css';
+import styles from '../css/repository.module.css';
 
 /**
  * Repository class

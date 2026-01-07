@@ -1,5 +1,6 @@
 import express from 'express';
 import fs from 'fs';
+import path from 'path';
 import proxy from './proxy.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -7,17 +8,6 @@ const port = process.env.PORT || 3001;
 
 async function startServer() {
   const app = express();
-
-  // Setup Vite middleware (development only)
-  let vite;
-  if (!isProduction) {
-    const { createServer } = await import('vite');
-    vite = await createServer({
-      server: { middlewareMode: true },
-      appType: 'custom',
-    });
-    app.use(vite.middlewares);
-  }
 
   // Body parsing - use raw to preserve binary data for proxy
   app.use(
@@ -37,31 +27,45 @@ async function startServer() {
     });
   });
 
-  // Proxy API requests to backend
+  // Proxy API requests to backend - MUST be before Vite middleware
   app.use('/api', proxy);
 
-  // Serve static files in production
-  if (isProduction) {
-    app.use('/assets', express.static('./dist/assets'));
-    app.use(express.static('./public'));
-  } else {
-    // Development: Serve public files
-    app.use(express.static('./public'));
+  // Setup Vite middleware (development only)
+  let vite;
+  if (!isProduction) {
+    const { createServer } = await import('vite');
+    vite = await createServer({
+      server: { middlewareMode: true },
+      appType: 'custom',
+    });
+    app.use(vite.middlewares);
   }
 
-  // SPA routing - must be last!
-  if (isProduction) {
-    // Production: serve pre-built index.html
-    app.get('/{*path}', (req, res) => {
-      res.sendFile('index.html', { root: './dist' });
-    });
-  } else {
-    // Development: use Vite to transform index.html
-    app.get('/{*path}', async (req, res) => {
+  // Serve static files
+  app.use(express.static('./public'));
+
+  // Static pages (no React)
+  app.get('/', (req, res) => {
+    res.sendFile('index.html', { root: './public' });
+  });
+
+  app.get('/imprint', (req, res) => {
+    res.sendFile('imprint.html', { root: './public' });
+  });
+
+  app.get('/privacyPolicy', (req, res) => {
+    res.sendFile('privacyPolicy.html', { root: './public' });
+  });
+
+  // React pages - use Vite in development
+  const serveReactPage = async (req, res, htmlFile) => {
+    if (isProduction) {
+      res.sendFile(htmlFile, { root: './public' });
+    } else {
       try {
         const template = await vite.transformIndexHtml(
           req.originalUrl,
-          fs.readFileSync('index.html', 'utf-8')
+          fs.readFileSync(path.join('./public', htmlFile), 'utf-8')
         );
         res.setHeader('Content-Type', 'text/html');
         res.send(template);
@@ -70,8 +74,26 @@ async function startServer() {
         console.error(error);
         res.status(500).send('Internal Server Error');
       }
-    });
-  }
+    }
+  };
+
+  app.get('/dashboard', (req, res) =>
+    serveReactPage(req, res, 'dashboard.html')
+  );
+  app.get('/admin', (req, res) => serveReactPage(req, res, 'dashboard.html'));
+
+  // PR pages: /:owner/:repo/pull/:number
+  app.get('/:owner/:repo/pull/:number', (req, res) => {
+    serveReactPage(req, res, 'pull_request.html');
+  });
+
+  // Test routes
+  app.get('/test/dashboard', (req, res) =>
+    serveReactPage(req, res, 'dashboard.html')
+  );
+  app.get('/test/:owner/:repo/pull/:number', (req, res) => {
+    serveReactPage(req, res, 'pull_request.html');
+  });
 
   app.listen(port, '0.0.0.0', () => {
     console.log(`Worlddriven webapp listening on port ${port}`);
